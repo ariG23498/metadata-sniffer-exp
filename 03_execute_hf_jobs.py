@@ -1,7 +1,6 @@
 import os
 import re
 import subprocess
-from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
@@ -10,7 +9,7 @@ from dotenv import load_dotenv
 from huggingface_hub import upload_file
 from slack_sdk import WebClient
 
-from configuration import ExecuteCustomCodeConfig
+from configuration import DatasetConfig, ExecuteCustomCodeConfig, SlackConfig
 from utilities import SlackMessage, SlackMessageType, send_slack_message, setup_logging
 
 load_dotenv()
@@ -54,8 +53,10 @@ def select_appropriate_gpu(vram_required: float, execution_urls, model_id):
 if __name__ == "__main__":
     client = WebClient(token=os.environ["SLACK_TOKEN"])
     config = ExecuteCustomCodeConfig()
+    ds_config = DatasetConfig()
+    slack_config = SlackConfig()
 
-    ds = load_dataset(config.model_vram_code_dataset_id, split="train")
+    ds = load_dataset(ds_config.model_vram_code_dataset_id, split="train")
 
     slack_message_report = {
         "models_with_no_safetensors": [],
@@ -146,7 +147,7 @@ if __name__ == "__main__":
         )
     ]
     send_slack_message(
-        client=client, channel_name=config.channel_name, messages=messages
+        client=client, channel_name=slack_config.channel_name, messages=messages
     )
 
     for issue_type, models in slack_message_report.items():
@@ -172,10 +173,10 @@ if __name__ == "__main__":
         messages.append(SlackMessage(text=text, msg_type=SlackMessageType.SECTION))
 
         send_slack_message(
-            client=client, channel_name=config.channel_name, messages=messages
+            client=client, channel_name=slack_config.channel_name, messages=messages
         )
 
     # Upload the executed models information
     Dataset.from_dict(models_executed_with_urls).push_to_hub(
-        config.models_executed_with_urls_dataset_id
+        ds_config.models_executed_with_urls_dataset_id
     )

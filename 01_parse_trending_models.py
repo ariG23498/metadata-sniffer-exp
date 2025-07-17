@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from huggingface_hub import HfApi, ModelInfo
 from slack_sdk import WebClient
 
-from configuration import ModelCheckerConfig
+from configuration import DatasetConfig, ModelCheckerConfig, SlackConfig
 from utilities import SlackMessage, SlackMessageType, send_slack_message, setup_logging
 
 load_dotenv()
@@ -92,6 +92,8 @@ def analyze_model_metadata(
 
 if __name__ == "__main__":
     # Configuration
+    ds_config = DatasetConfig()
+    slack_config = SlackConfig()
     config = ModelCheckerConfig()
     huggingface_api = HfApi()
     client = WebClient(token=os.environ["SLACK_TOKEN"])
@@ -135,7 +137,7 @@ if __name__ == "__main__":
     ]:
         custom_code_dataset["custom_code"].append(model_metadata_result.id)
     Dataset.from_dict(custom_code_dataset).push_to_hub(
-        config.models_with_custom_code_dataset_id
+        ds_config.models_with_custom_code_dataset_id
     )
 
     # 5: Send the updates to slack
@@ -148,7 +150,7 @@ if __name__ == "__main__":
         ),
     ]
     send_slack_message(
-        client=client, channel_name=config.channel_name, messages=messages
+        client=client, channel_name=slack_config.channel_name, messages=messages
     )
 
     for issue_type, models in models_by_issue_type.items():
@@ -180,5 +182,5 @@ if __name__ == "__main__":
         messages.append(SlackMessage(text=text, msg_type=SlackMessageType.SECTION))
 
         send_slack_message(
-            client=client, channel_name=config.channel_name, messages=messages
+            client=client, channel_name=slack_config.channel_name, messages=messages
         )

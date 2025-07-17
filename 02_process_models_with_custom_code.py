@@ -1,5 +1,4 @@
 import json
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List
 
@@ -8,7 +7,7 @@ from datasets import Dataset, load_dataset
 from dotenv import load_dotenv
 from huggingface_hub import HfApi, upload_file
 
-from configuration import CustomCodeCheckerConfig
+from configuration import DatasetConfig
 from utilities import setup_logging
 
 load_dotenv()
@@ -113,9 +112,7 @@ def get_hf_dataset_url(dataset_id: str, filename: str) -> str:
     return f"https://huggingface.co/datasets/{dataset_id}/raw/main/{filename}"
 
 
-def process_notebook_to_scripts(
-    model_id: str, config: CustomCodeCheckerConfig
-) -> List[str]:
+def process_notebook_to_scripts(model_id: str, config: DatasetConfig) -> List[str]:
     notebook = fetch_notebook_content(model_id)
     if not notebook:
         return []
@@ -138,7 +135,7 @@ def process_notebook_to_scripts(
     return processed_scripts
 
 
-def process_model_entry(model_id: str, config: CustomCodeCheckerConfig, hf_api) -> Dict:
+def process_model_entry(model_id: str, config: DatasetConfig, hf_api) -> Dict:
     model_name = sanitize_model_name(model_id)
     vram = estimate_model_vram(model_id, hf_api)
     scripts = process_notebook_to_scripts(model_id, config)
@@ -188,10 +185,10 @@ def process_model_entry(model_id: str, config: CustomCodeCheckerConfig, hf_api) 
 
 if __name__ == "__main__":
     hf_api = HfApi()
-    config = CustomCodeCheckerConfig()
+    ds_config = DatasetConfig()
 
     target_model_ids = load_dataset(
-        config.models_with_custom_code_dataset_id, split="train"
+        ds_config.models_with_custom_code_dataset_id, split="train"
     )["custom_code"]
 
     dataset_records = {
@@ -203,8 +200,8 @@ if __name__ == "__main__":
     }
 
     for model_id in target_model_ids:
-        result = process_model_entry(model_id, config, hf_api)
+        result = process_model_entry(model_id, ds_config, hf_api)
         for key in dataset_records:
             dataset_records[key].append(result[key])
 
-    Dataset.from_dict(dataset_records).push_to_hub(config.model_vram_code_dataset_id)
+    Dataset.from_dict(dataset_records).push_to_hub(ds_config.model_vram_code_dataset_id)

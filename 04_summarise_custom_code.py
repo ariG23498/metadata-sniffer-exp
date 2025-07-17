@@ -6,7 +6,7 @@ from datasets import load_dataset
 from dotenv import load_dotenv
 from slack_sdk import WebClient
 
-from configuration import SummarizerConfig
+from configuration import DatasetConfig, SlackConfig
 from utilities import SlackMessage, SlackMessageType, send_slack_message, setup_logging
 
 load_dotenv()
@@ -14,10 +14,11 @@ logger = setup_logging(__name__)
 
 
 if __name__ == "__main__":
-    config = SummarizerConfig()
+    ds_config = DatasetConfig()
+    slack_config = SlackConfig()
     client = WebClient(token=os.environ["SLACK_TOKEN"])
     models_executed_with_urls = load_dataset(
-        config.models_executed_with_urls_dataset_id, split="train"
+        ds_config.models_executed_with_urls_dataset_id, split="train"
     )
 
     today = datetime.now().strftime("%Y-%m-%d")
@@ -28,7 +29,7 @@ if __name__ == "__main__":
     ]
 
     send_slack_message(
-        client=client, channel_name=config.channel_name, messages=messages
+        client=client, channel_name=slack_config.channel_name, messages=messages
     )
 
     num_model_ids_executed = len(models_executed_with_urls["model_id"])
@@ -55,14 +56,14 @@ if __name__ == "__main__":
             )
         ]
         response = send_slack_message(
-            client=client, channel_name=config.channel_name, messages=messages
+            client=client, channel_name=slack_config.channel_name, messages=messages
         )
         parent_message_ts = response["ts"]
 
         execution_response = requests.get(execution_url).text
         send_slack_message(
             client=client,
-            channel_name=config.channel_name,
+            channel_name=slack_config.channel_name,
             messages=None,
             simple_text=execution_response,
             parent_message_ts=parent_message_ts,

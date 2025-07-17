@@ -53,7 +53,7 @@ def format_slack_message(text, msg_type):
         }
 
     else:
-        raise NotImplemented("This type is not implemented")
+        raise NotImplementedError("This type is not implemented")
 
 
 def send_slack_message(
