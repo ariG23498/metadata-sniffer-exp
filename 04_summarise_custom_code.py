@@ -1,23 +1,16 @@
-from datasets import load_dataset
-from dataclasses import dataclass
-from slack_sdk import WebClient
 import os
-import requests
-# from dotenv import load_dotenv
 from datetime import datetime
 
-# load_dotenv()
+import requests
+from datasets import load_dataset
+from dotenv import load_dotenv
+from slack_sdk import WebClient
 
+from configuration import SummarizerConfig
+from utilities import SlackMessage, SlackMessageType, send_slack_message, setup_logging
 
-@dataclass
-class SummarizerConfig:
-    models_executed_with_urls_dataset_id = "model-metadata/models_executed_urls"
-    channel_name = "#exp-slack-alerts"
-
-
-def send_slack_block(block, channel):
-    response = client.chat_postMessage(channel=channel, blocks=block)
-    return response["ts"]
+load_dotenv()
+logger = setup_logging(__name__)
 
 
 if __name__ == "__main__":
@@ -28,17 +21,15 @@ if __name__ == "__main__":
     )
 
     today = datetime.now().strftime("%Y-%m-%d")
-    block = [
-        {
-            "type": "header",
-            "text": {
-                "type": "plain_text",
-                "text": f"HF Jobs Run Report for {today}",
-                "emoji": False,
-            },
-        },
+    messages = [
+        SlackMessage(
+            text=f"HF Jobs Run Report for {today}", msg_type=SlackMessageType.HEADER
+        )
     ]
-    _ = send_slack_block(block, config.channel_name)
+
+    send_slack_message(
+        client=client, channel_name=config.channel_name, messages=messages
+    )
 
     num_model_ids_executed = len(models_executed_with_urls["model_id"])
     for idx in range(num_model_ids_executed):
@@ -57,11 +48,22 @@ if __name__ == "__main__":
                 },
             }
         ]
-        parent_message_ts = send_slack_block(block, config.channel_name)
+        messages = [
+            SlackMessage(
+                text=f"<https://huggingface.co/{model_id}|{model_id}> ➡️ <{job_url}|Job Url>",
+                msg_type=SlackMessageType.SECTION,
+            )
+        ]
+        response = send_slack_message(
+            client=client, channel_name=config.channel_name, messages=messages
+        )
+        parent_message_ts = response["ts"]
 
         execution_response = requests.get(execution_url).text
-        client.chat_postMessage(
-            channel=config.channel_name,
-            text=execution_response,
-            thread_ts=parent_message_ts,
+        send_slack_message(
+            client=client,
+            channel_name=config.channel_name,
+            messages=None,
+            simple_text=execution_response,
+            parent_message_ts=parent_message_ts,
         )

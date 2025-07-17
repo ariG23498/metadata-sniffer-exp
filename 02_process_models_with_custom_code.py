@@ -1,32 +1,18 @@
 import json
-import logging
-from pathlib import Path
 from dataclasses import dataclass
-from typing import List, Dict
+from pathlib import Path
+from typing import Dict, List
+
 import requests
-from huggingface_hub import HfApi
 from datasets import Dataset, load_dataset
-# from dotenv import load_dotenv
-from huggingface_hub import upload_file
+from dotenv import load_dotenv
+from huggingface_hub import HfApi, upload_file
 
-# Load environment variables
-# load_dotenv()
+from configuration import CustomCodeCheckerConfig
+from utilities import setup_logging
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
-
-
-@dataclass
-class CustomCodeCheckerConfig:
-    models_with_custom_code_dataset_id: str = "model-metadata/models_with_custom_code"
-    custom_code_py_files_dataset_id: str = "model-metadata/custom_code_py_files"
-    custom_code_execution_files_dataset_id: str = (
-        "model-metadata/custom_code_execution_files"
-    )
-    model_vram_code_dataset_id = "model-metadata/model_vram_code"
+load_dotenv()
+logger = setup_logging(__name__)
 
 
 # Directory for storing generated code locally
